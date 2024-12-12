@@ -28,11 +28,11 @@ class MSMarcoDataset(Dataset):
     """
 
     def __init__(self, file_path: str,
-                 tokenizer,
-                 max_seq_length: int = 512,
-                 mlm_probability: float = 0.15, 
-                 pad_to_max_length: bool = False,
-                 line_by_line: bool = False):
+                tokenizer,
+                max_seq_length: int = 512,
+                mlm_probability: float = 0.15, 
+                pad_to_max_length: bool = False,
+                line_by_line: bool = False):
         self.tokenizer = tokenizer
         self.max_seq_length = max_seq_length
         self.mlm_probability = mlm_probability
@@ -135,7 +135,7 @@ class MSMacroTriplet(Dataset):
     """
 
     def __init__(self, queries: Dict[int, Dict[str, Any]], corpus: Dict[int, str], ce_scores: Dict[Tuple[int, int], float],
-                 num_negs_per_system: int = 1, negs_to_use: Optional[List[str]] = None, use_all_queries: bool = True):
+                num_negs_per_system: int = 1, negs_to_use: Optional[List[str]] = None, use_all_queries: bool = True):
         self.queries = queries
         self.queries_ids = list(queries.keys())
         self.corpus = corpus
