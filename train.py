@@ -2,13 +2,14 @@ import argparse
 import collections
 import torch
 import numpy as np
-import data_loader.data_loaders as module_data
+import data.data_loaders as module_data
 import model.loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer
 from utils import prepare_device
+from transformers import AutoTokenizer
 
 
 # fix random seeds for reproducibility
@@ -22,7 +23,8 @@ def main(config):
     logger = config.get_logger('train')
 
     # setup data_loader instances
-    data_loader = config.init_obj('data_loader', module_data)
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    data_loader = config.init_obj('data_loader', module_data, tokenizer=tokenizer)
     valid_data_loader = data_loader.split_validation()
 
     # build model architecture, then print to console

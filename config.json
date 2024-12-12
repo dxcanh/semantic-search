@@ -3,18 +3,21 @@
     "n_gpu": 1,
 
     "arch": {
-        "type": "MnistModel",
+        "type": "MSMarcoDataset",
         "args": {}
     },
     "data_loader": {
-        "type": "MnistDataLoader",
-        "args":{
-            "data_dir": "data/",
-            "batch_size": 128,
-            "shuffle": true,
-            "validation_split": 0.1,
-            "num_workers": 2
-        }
+        "type": "MSMarcoDataset",
+        "args": {
+            "file_path": "/home/canhdx/workspace/semantic-search/queries/raw_texts/queries.train_corpus.txt",
+            "max_seq_length": 512,
+            "mlm_probability": 0.15,
+            "pad_to_max_length": false,
+            "line_by_line": false
+        },
+        "batch_size": 128,
+        "shuffle": true,
+        "num_workers": 2
     },
     "optimizer": {
         "type": "Adam",

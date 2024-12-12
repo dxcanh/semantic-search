@@ -6,6 +6,7 @@ from operator import getitem
 from datetime import datetime
 from logger import setup_logging
 from utils import read_json, write_json
+from transformers import AutoTokenizer
 
 
 class ConfigParser:
@@ -86,6 +87,8 @@ class ConfigParser:
         is equivalent to
         `object = module.name(a, b=1)`
         """
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        
         module_name = self[name]['type']
         module_args = dict(self[name]['args'])
         assert all([k not in module_args for k in kwargs]), 'Overwriting kwargs given in config file is not allowed'
