@@ -1,15 +1,17 @@
 {
-    "name": "Mnist_LeNet",
+    "name": "BERT",
     "n_gpu": 1,
 
     "arch": {
-        "type": "MSMarcoDataset",
-        "args": {}
+        "type": "BERT",
+        "args": {
+            "model_name": "bert-base-uncased"
+        }
     },
     "data_loader": {
         "type": "MSMarcoDataset",
         "args": {
-            "file_path": "/home/canhdx/workspace/semantic-search/queries/raw_texts/queries.train_corpus.txt",
+            "file_path": "/home/canhdx/workspace/semantic-search/queries/queries.train.tsv",
             "max_seq_length": 512,
             "mlm_probability": 0.15,
             "pad_to_max_length": false,

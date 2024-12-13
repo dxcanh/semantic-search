@@ -86,9 +86,7 @@ class ConfigParser:
         `object = config.init_obj('name', module, a, b=1)`
         is equivalent to
         `object = module.name(a, b=1)`
-        """
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-        
+        """        
         module_name = self[name]['type']
         module_args = dict(self[name]['args'])
         assert all([k not in module_args for k in kwargs]), 'Overwriting kwargs given in config file is not allowed'

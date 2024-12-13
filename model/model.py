@@ -1,20 +1,45 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from base import BaseModel
-import torch
+from transformers import T5Tokenizer, T5Model, BertModel, BertTokenizer
+from data_loader.data_loaders import MSMarcoDataset
+import numpy as np
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+import torch.nn as nn
+import numpy as np
+from abc import abstractmethod
+
+
+class BaseModel(nn.Module):
+    """
+    Base class for all models
+    """
+    @abstractmethod
+    def forward(self, *inputs):
+        """
+        Forward pass logic
+
+        :return: Model output
+        """
+        raise NotImplementedError
+
+    def __str__(self):
+        """
+        Model prints with number of trainable parameters
+        """
+        model_parameters = filter(lambda p: p.requires_grad, self.parameters())
+        params = sum([np.prod(p.size()) for p in model_parameters])
+        return super().__str__() + '\nTrainable parameters: {}'.format(params)
 
 
 class JointEmbedding(nn.Module):
-
     def __init__(self, vocab_size, size):
         super(JointEmbedding, self).__init__()
 
         self.size = size
-
         self.token_emb = nn.Embedding(vocab_size, size)
         self.segment_emb = nn.Embedding(vocab_size, size)
-
         self.norm = nn.LayerNorm(size)
 
     def forward(self, input_tensor):
@@ -43,13 +68,8 @@ class JointEmbedding(nn.Module):
 
         return pos.expand(batch_size, *pos.size())
 
-    def numeric_position(self, dim, input_tensor):
-        pos_tensor = torch.arange(dim, dtype=torch.long).to(device)
-        return pos_tensor.expand_as(input_tensor)
-
 
 class AttentionHead(nn.Module):
-
     def __init__(self, dim_inp, dim_out):
         super(AttentionHead, self).__init__()
 
@@ -65,15 +85,16 @@ class AttentionHead(nn.Module):
         scale = query.size(1) ** 0.5
         scores = torch.bmm(query, key.transpose(1, 2)) / scale
 
-        scores = scores.masked_fill_(attention_mask, -1e9)
-        attn = f.softmax(scores, dim=-1)
+        if attention_mask is not None:
+            scores = scores.masked_fill(attention_mask == 0, -1e9)  # mask out padding tokens
+
+        attn = F.softmax(scores, dim=-1)
         context = torch.bmm(attn, value)
 
         return context
 
 
 class MultiHeadAttention(nn.Module):
-
     def __init__(self, num_heads, dim_inp, dim_out):
         super(MultiHeadAttention, self).__init__()
 
@@ -91,7 +112,6 @@ class MultiHeadAttention(nn.Module):
 
 
 class Encoder(nn.Module):
-
     def __init__(self, dim_inp, dim_out, attention_heads=4, dropout=0.1):
         super(Encoder, self).__init__()
 
@@ -110,27 +130,56 @@ class Encoder(nn.Module):
         res = self.feed_forward(context)
         return self.norm(res)
 
-
 class BERT(BaseModel):
-
-    def __init__(self, config):
+    def __init__(self, model_name='bert-base-uncased'):
         super(BERT, self).__init__()
-        raise NotImplementedError   
-        
+        self.tokenizer = BertTokenizer.from_pretrained(model_name)
+        self.bert = BertModel.from_pretrained(model_name)
 
-    def forward(self, input_tensor: torch.Tensor, attention_mask: torch.Tensor):
-        raise NotImplementedError  
-    
-    def load_weights_from_huggingface(self,model_name):
-        # Load weights manually from Hugging Face checkpoint
-        # This example assumes 'model_name' is the path to the checkpoint
-        # You'll need to load individual weights and set them to corresponding layers
+    def forward(self, input_texts):
+        """
+        Forward pass logic for BERT.
 
-        # Example: Loading weights for the JointEmbedding layer
-        # Replace 'self.embedding.token_emb.weight' and 'self.embedding.segment_emb.weight' 
-        # with the weights from the Hugging Face checkpoint
-        self.embedding.token_emb.weight = nn.Parameter(torch.tensor(...))  # Load token_emb weights
-        self.embedding.segment_emb.weight = nn.Parameter(torch.tensor(...))  # Load segment_emb weights
+        :param input_texts: A list of input texts to process.
+        :return: Hidden states of the BERT model's output.
+        """
+        # Tokenize the input texts
+        encoded_inputs = self.tokenizer(input_texts, padding=True, truncation=True, return_tensors='pt')
+        input_ids = encoded_inputs['input_ids'].to(device)
+        attention_mask = encoded_inputs['attention_mask'].to(device)
 
-        # Load other weights for Encoder, token_prediction_layer, classification_layer, etc.
-    
+        # Forward pass through BERT
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        return outputs.last_hidden_state[:, 0, :]  # Use the first token representation (CLS-like)
+
+
+class T5(BaseModel):
+    def __init__(self, model_name='t5-small'):
+        super(T5, self).__init__()
+        self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+        self.t5 = T5Model.from_pretrained(model_name)
+
+    def forward(self, input_texts):
+        """
+        Forward pass logic for T5.
+
+        :param input_texts: A list of input texts to process.
+        :return: Hidden states of the T5 model's output.
+        """
+        # Tokenize the input texts
+        encoded_inputs = self.tokenizer(input_texts, padding=True, truncation=True, return_tensors='pt')
+        input_ids = encoded_inputs['input_ids'].to(next(self.parameters()).device)
+        attention_mask = encoded_inputs['attention_mask'].to(next(self.parameters()).device)
+
+        # Forward pass through T5
+        outputs = self.t5(input_ids=input_ids, attention_mask=attention_mask)
+        # Return the CLS token representation or sequence representation
+        return outputs.last_hidden_state[:, 0, :]  # Use the first token representation (CLS-like)
+
+    def __str__(self):
+        """
+        Model prints with number of trainable parameters.
+        """
+        model_parameters = filter(lambda p: p.requires_grad, self.parameters())
+        params = sum([np.prod(p.size()) for p in model_parameters])
+        return super().__str__() + '\nTrainable parameters: {}'.format(params)
