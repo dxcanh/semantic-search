@@ -1,5 +1,5 @@
-from src.Vocabulary import Vocabulary
-from src.RNNmodel import RNN
+from model.Vocabulary import Vocabulary
+from model.RNNmodel import RNN
 import torch
 import gradio as gr
 import torchtext.vocab as vocab1
